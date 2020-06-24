@@ -41,24 +41,64 @@ function formulaReplacer(str, group_1, group_2, offset, s) {
 }
 
 
-//ищем формулы и отпрявляем в formulaReplacer на рендеринг
-function prepareInnerHTML(messIndex, innerStr){
-    $( this ).addClass("rendered");    //помечаем отрендеренное сообщение классом rendered
-    return innerStr.replace(/\$\$(.*?)\$\$|\\\[(.*?)\\\]/g, formulaReplacer);
+function getScrollParent(node) {
+    const isElement = node instanceof HTMLElement;
+    const overflowY = isElement && window.getComputedStyle(node).overflowY;
+    const isScrollable = overflowY !== 'visible' && overflowY !== 'hidden';
+
+    if (!node) {
+        return null;
+    } else if (isScrollable && node.scrollHeight >= node.clientHeight) {
+        return node;
+    }
+
+    return getScrollParent(node.parentNode) || document.body;
+}
+
+
+function renderElem(elem) {
+    // Получаем видимые границы окна прокрутки
+    scrollable = getScrollParent(elem)
+    scroll_borders = scrollable.getBoundingClientRect()
+    client_borders = elem.getBoundingClientRect()
+    elem_higher_bottom_border = scroll_borders.bottom >= client_borders.bottom
+
+    elem.classList.add('rendered')
+    elem.innerHTML = elem.innerHTML.replace(/\$\$(.*?)\$\$|\\\[(.*?)\\\]/g, formulaReplacer)
+
+    if (elem_higher_bottom_border) {
+        scrollable.scrollBy(0, elem.getBoundingClientRect().height - client_borders.height)
+    }
 }
 
 
 //ищем все блоки, где может быть написана формула
 function render_all(){
-    $(".im-mess:not(.rendered),\
+    let queue = document.body.querySelectorAll(".im-mess:not(.rendered),\
        .reply_content:not(.rendered),\
        .wall_post_text:not(.rendered),\
-       .article_layer__content:not(.rendered)").html(prepareInnerHTML);
+       .article_layer__content:not(.rendered)");
+    for (let elem of queue) {
+        elem.classList.add('rendered')
+        renderElem(elem)
+    }
 }
 
 
+function loadKatexCss() {
+    // This is only needed in Chrome
+    if (window.chrome) {
+        var new_link = document.createElement("link");
+        new_link.setAttribute('rel', "stylesheet");
+        new_link.setAttribute('href', "https://cdn.jsdelivr.net/npm/katex@0.10.0-beta/dist/katex.min.css");
+        new_link.setAttribute('integrity', "sha384-9tPv11A+glH/on/wEu99NVwDPwkMQESOocs/ZGXPoIiLE8MU/qkqUcZ3zzL+6DuH");
+        new_link.setAttribute('crossorigin', "anonymous");
+        document.head.appendChild(new_link);
+    }
+}
 
-function main(){
+function main() {
+    loadKatexCss();
     appendCSS();
-    setInterval(render_all, 200);
+    setInterval(render_all, 300);
 }
