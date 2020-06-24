@@ -34,6 +34,7 @@ function formulaReplacer(str, group_1, group_2, offset, s) {
             res = buffer.innerHTML;
         } catch(e) {
             buffer.setAttribute('style', 'background: #fc0;');
+            //buffer.setAttribute('title', str(e));
             buffer.innerHTML = formula;
             res = buffer.outerHTML;
         }
@@ -47,18 +48,45 @@ function prepareInnerHTML(messIndex, innerStr){
     return innerStr.replace(/\$\$(.*?)\$\$|\\\[(.*?)\\\]/g, formulaReplacer);
 }
 
+function renderElem(elem) {
+    for (var i = 0; i < elem.childNodes.length; i++) {
+        var childNode = elem.childNodes[i];
+
+        if (childNode.nodeType === 3) {
+            // Text node
+            let span = document.createElement('span');
+            span.innerHTML = childNode.textContent.replace(/\$\$(.*?)\$\$|\\\[([\s\S]*?)\\\]/g, formulaReplacer);
+            if (span.childNodes.length > 1 || span.childNodes[0].nodeType !== 3) {
+                // Something was replaced
+                for (let spanChild of span.childNodes) {
+                    elem.insertBefore(spanChild, childNode)
+                }
+                elem.removeChild(childNode)
+            }
+            i += span.childNodes.length - 1;
+        } else if (childNode.nodeType === 1) {
+            // Element node
+            renderElem(childNode);
+        }
+    }
+}
+
 
 //ищем все блоки, где может быть написана формула
 function render_all(){
-    $(".im-mess:not(.rendered),\
+    let queue = document.body.querySelectorAll(".im-mess:not(.rendered),\
        .reply_content:not(.rendered),\
        .wall_post_text:not(.rendered),\
-       .article_layer__content:not(.rendered)").html(prepareInnerHTML);
+       .article_layer__content:not(.rendered)");
+    for (let elem of queue) {
+        elem.classList.add('rendered')
+        renderElem(elem)
+    }
 }
 
 
 
-function main(){
+function main() {
     appendCSS();
-    setInterval(render_all, 200);
+    setInterval(render_all, 300);
 }
