@@ -6,11 +6,6 @@
 
 
 //классом rendered будем помечать блоки с отредеренными формулами
-function appendCSS(){
-    /*$('<style>\
-       .rendered {}\
-      </style>').appendTo($("html > head"));*/
-}
 
 
 //заменяем html символы на unicode
