@@ -21,8 +21,8 @@
 		{
 			"matches": ["https://vk.com/*"],
 			"js": ["katex/katex.min.js", "js/main.js"],
-			"css": ["katex/katex.min.css"],
-			"run_at": "document_start"
+			"css": ["katex/katex.min.css"],  // This line loads css successfully in Firefox
+			"run_at": "document_idle"
 		}
 	]
 }

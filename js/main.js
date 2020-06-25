@@ -29,6 +29,7 @@ function formulaReplacer(str, group_1, group_2, offset, s) {
             res = buffer.innerHTML;
         } catch(e) {
             buffer.setAttribute('style', 'background: #fc0;');
+            buffer.setAttribute('title', e.toString())
             buffer.innerHTML = formula;
             res = buffer.outerHTML;
         }
@@ -36,6 +37,7 @@ function formulaReplacer(str, group_1, group_2, offset, s) {
 }
 
 
+//находим ближайшего родителя, которого можно прокручивать (колесиком мыши)
 function getScrollParent(node) {
     const isElement = node instanceof HTMLElement;
     const overflowY = isElement && window.getComputedStyle(node).overflowY;
@@ -52,18 +54,8 @@ function getScrollParent(node) {
 
 
 function renderElem(elem) {
-    // Получаем видимые границы окна прокрутки
-    scrollable = getScrollParent(elem)
-    scroll_borders = scrollable.getBoundingClientRect()
-    client_borders = elem.getBoundingClientRect()
-    elem_higher_bottom_border = scroll_borders.bottom >= client_borders.bottom
-
     elem.classList.add('rendered')
     elem.innerHTML = elem.innerHTML.replace(/\$\$(.*?)\$\$|\\\[(.*?)\\\]/g, formulaReplacer)
-
-    if (elem_higher_bottom_border) {
-        scrollable.scrollBy(0, elem.getBoundingClientRect().height - client_borders.height)
-    }
 }
 
 
@@ -73,15 +65,41 @@ function render_all(){
        .reply_content:not(.rendered),\
        .wall_post_text:not(.rendered),\
        .article_layer__content:not(.rendered)");
+
+    //сохраним размеры элементов перед рендерингом
+    let scroll_storage = []
+    for (let elem of queue) {
+        scrollable = getScrollParent(elem)
+        scroll_borders = scrollable.getBoundingClientRect()
+        client_borders = elem.getBoundingClientRect()
+
+        if (scroll_borders.bottom >= client_borders.bottom) {
+            scroll_storage.push({
+                elem: elem,
+                scrollable: scrollable,
+                prev_height: client_borders.height
+            })
+        }
+    }
+
     for (let elem of queue) {
         elem.classList.add('rendered')
         renderElem(elem)
+    }
+
+    //если рендер увеличил высоту элементов, то мы хотим прокрутить ту высоту,
+    //которую мы добавили
+    for (let st of scroll_storage) {
+        let sb = st.elem.getBoundingClientRect().height - st.prev_height
+        if (sb > 0) {
+            st.scrollable.scrollBy(0, sb)
+        }
     }
 }
 
 
 function loadKatexCss() {
-    // This is only needed in Chrome
+    //подгружаем katex css для Chrome
     if (window.chrome) {
         var new_link = document.createElement("link");
         new_link.setAttribute('rel', "stylesheet");
@@ -94,6 +112,5 @@ function loadKatexCss() {
 
 function main() {
     loadKatexCss();
-    appendCSS();
     setInterval(render_all, 300);
 }
