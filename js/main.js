@@ -64,7 +64,7 @@ function render_all(){
     let queue = document.body.querySelectorAll(".im-mess:not(.rendered),\
        .reply_content:not(.rendered),\
        .wall_post_text:not(.rendered),\
-       .article_layer__content:not(.rendered)");
+       .article_view:not(.rendered)");
 
     //сохраним размеры элементов перед рендерингом
     let scroll_storage = []
