@@ -24,15 +24,16 @@ function formulaReplacer(str, group_1, group_2, offset, s) {
     if (formulaType) formula = group_2;
     else formula = group_1;
     var buffer = document.createElement('span');
-    try{   //рендерим формулы и после возвращаем результат
-            katex.render(formula.replace(/&quot;|&gt;|&lt;|<br>|amp;/g, htmlReplacer), buffer, {displayMode: formulaType});
-            res = buffer.innerHTML;
-        } catch(e) {
-            buffer.setAttribute('style', 'background: #fc0;');
-            buffer.setAttribute('title', e.toString())
-            buffer.innerHTML = formula;
-            res = buffer.outerHTML;
-        }
+    try {
+        //рендерим формулы и после возвращаем результат
+        katex.render(formula.replace(/&quot;|&gt;|&lt;|<br>|amp;/g, htmlReplacer), buffer, {displayMode: formulaType});
+        res = buffer.innerHTML;
+    } catch(e) {
+        buffer.setAttribute('style', 'background: #fc0;');
+        buffer.setAttribute('title', e.message)
+        buffer.innerHTML = formula;
+        res = buffer.outerHTML;
+    }
     return res;
 }
 

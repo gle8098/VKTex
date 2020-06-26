@@ -1,6 +1,6 @@
 {
 	"name": "VKTex",
-	"version": "1.2.1",
+	"version": "1.2.2",
 	"manifest_version": 2,
 	"description": "Send math formulas with TeX on VK social network",
 	"icons": {
