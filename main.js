@@ -24,6 +24,62 @@ function getScrollParent(node) {
 }
 
 
+// Добавляет текст в конец parent.
+// Текст представляется как последовательность Text Nodes со вставками <br>
+// в местах переноса строки.
+function appendTextToDOM(parent, text) {
+    let start_ind = 0
+    let ind = 0
+    while ( (ind = text.indexOf('\n', start_ind)) != -1) {
+        parent.appendChild(document.createTextNode(text.slice(start_ind, ind)))
+        parent.appendChild(document.createElement('br'))
+        start_ind = ind + 1
+    }
+
+    if (start_ind < text.length) {
+        parent.appendChild(document.createTextNode(text.slice(start_ind)))
+    }
+}
+
+
+// Рендерит TeX в тексте. Возвращает готовый ко вставке в дерево
+// веб-страницы Document Fragment, или null, если в тексте нет TeX.
+function renderText(text) {
+    const PATTERN = /\$\$([\s\S]*?)\$\$|\\\[([\s\S]*?)\\\]/g
+
+    if (text.search(PATTERN) == -1) {
+        return null
+    }
+
+    let examined_until = 0  // Длина уже обработанного префикса text
+    let frag = document.createDocumentFragment()
+
+    let replacer = function(match, p1, p2, offset, string) {
+        if (offset - examined_until > 0) {
+            appendTextToDOM(frag, text.slice(examined_until, offset))
+        }
+        
+        let tmp_frag = document.createDocumentFragment()
+        katex.render(p1 ? p1 : p2, tmp_frag, {
+            displayMode: match[0] != '$',
+            throwOnError: false}
+        );
+        frag.appendChild(tmp_frag)
+
+        examined_until = offset + match.length
+        return ''
+    }
+
+    text.replace(PATTERN, replacer);
+    if (examined_until < text.length) {
+        appendTextToDOM(frag, text.slice(examined_until))
+    }
+
+    return frag
+}
+
+
+// Рендерит TeX в конкретном элементе DOM
 function renderElem(elem) {
     for (let i = 0; i < elem.childNodes.length; i++) {
         let childNode = elem.childNodes[i];
@@ -31,13 +87,17 @@ function renderElem(elem) {
         let headI = i
 
         if (childNode.nodeType === 1 && childNode.tagName != 'BR') {
+            // Элемент
             renderElem(childNode)
             continue
         }
 
-        // Ищем последовательность текста
+        // childNode -- это текст (Text Node) или <br>, которые мы также считаем текстом
+        // 1. Найдем последовательность текста
+
         let text = ''
-        let seq_len = 0
+        let seq_len = 0  // Кол-во nodes в последовательности
+
         for (; i < elem.childNodes.length; i++, seq_len++) {
             childNode = elem.childNodes[i]
 
@@ -46,57 +106,20 @@ function renderElem(elem) {
             } else if (childNode.nodeType === 1 && childNode.tagName == 'BR') {
                 text += '\n'
             } else {
-                // Не текстовый элемент
+                // Не текстовый элемент. Стоп машина.
                 i--
                 break
             }
         }
 
-        const PATTERN = /\$\$([\s\S]*?)\$\$|\\\[([\s\S]*?)\\\]/g
-
-        if (text.search(PATTERN) == -1) {
+        // 2. Рендерим текст
+        frag = renderText(text)
+        if (frag === null) {
+            // В тексте нечего рендерить, пропускаем его
             continue
         }
 
-        let examined_until = 0
-        let frag = document.createDocumentFragment()
-
-        let fromTextContent = function(text) {
-            let frag = document.createDocumentFragment()
-
-            let start_ind = 0
-            let ind = 0
-            while ( (ind = text.indexOf('\n', start_ind)) != -1) {
-                frag.appendChild(document.createTextNode(text.slice(start_ind, ind)))
-                frag.appendChild(document.createElement('br'))
-                start_ind = ind + 1
-            }
-
-            if (start_ind < text.length) {
-                frag.appendChild(document.createTextNode(text.slice(start_ind)))
-            }
-
-            return frag
-        }
-
-        let replacer = function(match, p1, p2, offset, string) {
-            if (offset - examined_until > 0) {
-                frag.appendChild(fromTextContent(text.slice(examined_until, offset)))
-            }
-            
-            let tmp_frag = document.createDocumentFragment()
-            katex.render(p1 ? p1 : p2, tmp_frag, {displayMode: match[0] != '$', throwOnError: false});
-            frag.appendChild(tmp_frag)
-
-            examined_until = offset + match.length
-            return ''
-        }
-
-        text.replace(/\$\$([\s\S]*?)\$\$|\\\[([\s\S]*?)\\\]/g, replacer);
-        if (examined_until < text.length) {
-            frag.appendChild(fromTextContent(text.slice(examined_until)))
-        }
-
+        // 3. Заменяем текст на отрисованный TeX
         i = headI + frag.childNodes.length
         elem.insertBefore(frag, headChildNode)
 
@@ -150,7 +173,7 @@ function render_all(){
 function loadKatexCss() {
     //подгружаем katex css для Chrome
     if (window.chrome) {
-        var new_link = document.createElement("link");
+        let new_link = document.createElement("link");
         new_link.setAttribute('rel', "stylesheet");
         new_link.setAttribute('href', "https://cdn.jsdelivr.net/npm/katex@0.10.0-beta/dist/katex.min.css");
         new_link.setAttribute('integrity', "sha384-9tPv11A+glH/on/wEu99NVwDPwkMQESOocs/ZGXPoIiLE8MU/qkqUcZ3zzL+6DuH");
