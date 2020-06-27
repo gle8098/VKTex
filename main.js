@@ -8,36 +8,6 @@
 //классом rendered будем помечать блоки с отредеренными формулами
 
 
-//заменяем html символы на unicode
-function htmlReplacer(str, offset, s){
-    if (str == "&quot;") return '"';
-    if (str == "&gt;") return '>';
-    if (str == "&lt;") return '<';
-	if (str == "<br>") return '';
-	if (str == "amp;") return '';
-}
-
-
-//заменяем текст формулы на ее саму
-function formulaReplacer(str, group_1, group_2, offset, s) {
-    var formula, formulaType = str[0] == '\\', res;
-    if (formulaType) formula = group_2;
-    else formula = group_1;
-    var buffer = document.createElement('span');
-    try {
-        //рендерим формулы и после возвращаем результат
-        katex.render(formula.replace(/&quot;|&gt;|&lt;|<br>|amp;/g, htmlReplacer), buffer, {displayMode: formulaType});
-        res = buffer.innerHTML;
-    } catch(e) {
-        buffer.setAttribute('style', 'background: #fc0;');
-        buffer.setAttribute('title', e.message)
-        buffer.innerHTML = formula;
-        res = buffer.outerHTML;
-    }
-    return res;
-}
-
-
 //находим ближайшего родителя, которого можно прокручивать (колесиком мыши)
 function getScrollParent(node) {
     const isElement = node instanceof HTMLElement;
@@ -55,14 +25,92 @@ function getScrollParent(node) {
 
 
 function renderElem(elem) {
-    elem.classList.add('rendered')
-    elem.innerHTML = elem.innerHTML.replace(/\$\$(.*?)\$\$|\\\[(.*?)\\\]/g, formulaReplacer)
+    for (let i = 0; i < elem.childNodes.length; i++) {
+        let childNode = elem.childNodes[i];
+        let headChildNode = childNode
+        let headI = i
+
+        if (childNode.nodeType === 1 && childNode.tagName != 'BR') {
+            renderElem(childNode)
+            continue
+        }
+
+        // Ищем последовательность текста
+        let text = ''
+        let seq_len = 0
+        for (; i < elem.childNodes.length; i++, seq_len++) {
+            childNode = elem.childNodes[i]
+
+            if (childNode.nodeType === 3) {
+                text += childNode.textContent
+            } else if (childNode.nodeType === 1 && childNode.tagName == 'BR') {
+                text += '\n'
+            } else {
+                // Не текстовый элемент
+                i--
+                break
+            }
+        }
+
+        const PATTERN = /\$\$([\s\S]*?)\$\$|\\\[([\s\S]*?)\\\]/g
+
+        if (text.search(PATTERN) == -1) {
+            continue
+        }
+
+        let examined_until = 0
+        let frag = document.createDocumentFragment()
+
+        let fromTextContent = function(text) {
+            let frag = document.createDocumentFragment()
+
+            let start_ind = 0
+            let ind = 0
+            while ( (ind = text.indexOf('\n', start_ind)) != -1) {
+                frag.appendChild(document.createTextNode(text.slice(start_ind, ind)))
+                frag.appendChild(document.createElement('br'))
+                start_ind = ind + 1
+            }
+
+            if (start_ind < text.length) {
+                frag.appendChild(document.createTextNode(text.slice(start_ind)))
+            }
+
+            return frag
+        }
+
+        let replacer = function(match, p1, p2, offset, string) {
+            if (offset - examined_until > 0) {
+                frag.appendChild(fromTextContent(text.slice(examined_until, offset)))
+            }
+            
+            let tmp_frag = document.createDocumentFragment()
+            katex.render(p1 ? p1 : p2, tmp_frag, {displayMode: match[0] != '$', throwOnError: false});
+            frag.appendChild(tmp_frag)
+
+            examined_until = offset + match.length
+            return ''
+        }
+
+        text.replace(/\$\$([\s\S]*?)\$\$|\\\[([\s\S]*?)\\\]/g, replacer);
+        if (examined_until < text.length) {
+            frag.appendChild(fromTextContent(text.slice(examined_until)))
+        }
+
+        i = headI + frag.childNodes.length
+        elem.insertBefore(frag, headChildNode)
+
+        for (; seq_len > 0; seq_len--) {
+            elem.childNodes[i].remove()
+        }
+
+    }
 }
 
 
 //ищем все блоки, где может быть написана формула
 function render_all(){
-    let queue = document.body.querySelectorAll(".im-mess:not(.rendered),\
+    let queue = document.body.querySelectorAll(".im-mess--text:not(.rendered),\
        .reply_content:not(.rendered),\
        .wall_post_text:not(.rendered),\
        .article_view:not(.rendered)");
