@@ -1,6 +1,6 @@
 {
 	"name": "VKTex",
-	"version": "1.3",
+	"version": "1.3.1",
 	"manifest_version": 2,
 	"description": "Send math formulas with TeX on VK social network",
 	"icons": {
@@ -22,8 +22,7 @@
 		{
 			"matches": ["https://vk.com/*"],
 			"js": ["katex/katex.min.js", "main.js"],
-			"css": ["katex/katex.min.css"],
-			// Chrome needs additional help with loading fonts required by css
+			"css": ["katex/katex.min.css", "autoscroll-fix.css"],
 			"run_at": "document_idle"
 		}
 	]
