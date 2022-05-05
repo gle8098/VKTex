@@ -1,6 +1,6 @@
 {
 	"name": "VKTex",
-	"version": "1.3.1",
+	"version": "1.4.0",
 	"manifest_version": 2,
 	"description": "Send math formulas with TeX on VK social network",
 	"icons": {
@@ -8,21 +8,14 @@
 		"48": "images/icon-48.png",
 		"128": "images/icon-128.png"		
 	},
-	"browser_action": {
-		"default_icon": "images/icon-16.png",
-		"default_title": "VK Tex"
-	},
 	"permissions": [
 		"https://vk.com/*"
-	],
-	"web_accessible_resources": [
-		"katex/*"
 	],
 	"content_scripts": [
 		{
 			"matches": ["https://vk.com/*"],
-			"js": ["katex/katex.min.js", "main.js"],
-			"css": ["katex/katex.min.css", "autoscroll-fix.css"],
+			"js": ["katex/katex.min.js", "katex/contrib/copy-tex.js", "main.js"],
+			"css": ["katex/katex.min.css", "katex/contrib/copy-tex.css", "autoscroll-fix.css"],
 			"run_at": "document_idle"
 		}
 	]

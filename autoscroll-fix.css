@@ -1,3 +1,6 @@
 .katex-display {
+	/* Для формул в display-mode установлен отступ, который
+     * не учитывается методом getBoundingClientRect().
+     * С этим исправлением формулы прокручиваются полностью. */
 	margin: 0 !important;
 }

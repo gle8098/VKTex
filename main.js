@@ -1,14 +1,14 @@
 (function() {
     'use strict';
-    console.debug('VKTex Load Initiated');
+    console.debug('VKTex load started');
     main();
 })();
 
 
-//классом rendered будем помечать блоки с отредеренными формулами
+// Классом .rendered будем помечать блоки с отредеренными формулами
 
 
-//находим ближайшего родителя, которого можно прокручивать (колесиком мыши)
+// Находит ближайшего родителя, которого можно прокручивать (колесиком мыши)
 function getScrollParent(node) {
     const isElement = node instanceof HTMLElement;
     const overflowY = isElement && window.getComputedStyle(node).overflowY;
@@ -20,12 +20,12 @@ function getScrollParent(node) {
         return node;
     }
 
-    return getScrollParent(node.parentNode) || document.body;
+    return getScrollParent(node.parentNode) || document.documentElement;
 }
 
 
 // Добавляет текст в конец parent.
-// Текст представляется как последовательность Text Nodes со вставками <br>
+// Текст представляется как последовательность text nodes со вставками <br>
 // в местах переноса строки.
 function appendTextToDOM(parent, text) {
     let start_ind = 0
@@ -45,6 +45,7 @@ function appendTextToDOM(parent, text) {
 // Рендерит TeX в тексте. Возвращает готовый ко вставке в дерево
 // веб-страницы Document Fragment, или null, если в тексте нет TeX.
 function renderText(text) {
+    // Regex для поиска $$...$$ или \[...\]
     const PATTERN = /\$\$([\s\S]*?)\$\$|\\\[([\s\S]*?)\\\]/g
 
     if (text.search(PATTERN) == -1) {
@@ -62,8 +63,8 @@ function renderText(text) {
         let tmp_frag = document.createDocumentFragment()
         katex.render(p1 ? p1 : p2, tmp_frag, {
             displayMode: match[0] != '$',
-            throwOnError: false}
-        );
+            throwOnError: false
+        });
         frag.appendChild(tmp_frag)
 
         examined_until = offset + match.length
@@ -92,7 +93,7 @@ function renderElem(elem) {
             continue
         }
 
-        // childNode -- это текст (Text Node) или <br>, которые мы также считаем текстом
+        // childNode -- это текст (Text Node) или <br>, который мы также считаем частью текста
         // 1. Найдем последовательность текста
 
         let text = ''
@@ -131,14 +132,14 @@ function renderElem(elem) {
 }
 
 
-//ищем все блоки, где может быть написана формула
+// Ищем все блоки, где может быть написана формула
 function render_all(){
     let queue = document.body.querySelectorAll(".im-mess--text:not(.rendered),\
        .reply_content:not(.rendered),\
        .wall_post_text:not(.rendered),\
        .article_view:not(.rendered)");
 
-    //сохраним размеры элементов перед рендерингом
+    // Сохраним размеры элементов перед рендерингом
     let scroll_storage = []
     for (let elem of queue) {
         scrollable = getScrollParent(elem)
@@ -159,8 +160,7 @@ function render_all(){
         renderElem(elem)
     }
 
-    //если рендер увеличил высоту элементов, то мы хотим прокрутить ту высоту,
-    //которую мы добавили
+    // Если рендер увеличил высоту элементов, то мы хотим прокрутить ту высоту, которую мы добавили
     for (let st of scroll_storage) {
         let sb = st.elem.getBoundingClientRect().height - st.prev_height
         if (sb > 0) {
@@ -169,20 +169,6 @@ function render_all(){
     }
 }
 
-
-function loadKatexCss() {
-    //подгружаем katex css для Chrome
-    if (window.chrome) {
-        let new_link = document.createElement("link");
-        new_link.setAttribute('rel', "stylesheet");
-        new_link.setAttribute('href', "https://cdn.jsdelivr.net/npm/katex@0.10.0-beta/dist/katex.min.css");
-        new_link.setAttribute('integrity', "sha384-9tPv11A+glH/on/wEu99NVwDPwkMQESOocs/ZGXPoIiLE8MU/qkqUcZ3zzL+6DuH");
-        new_link.setAttribute('crossorigin', "anonymous");
-        document.head.appendChild(new_link);
-    }
-}
-
 function main() {
-    loadKatexCss();
     setInterval(render_all, 300);
 }
